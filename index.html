@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PC+ Project Hub</title>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1a1a2e;
+    --ink-light: #4a4a6a;
+    --ink-faint: #9090b0;
+    --cream: #f8f6f1;
+    --cream-dark: #ede9e0;
+    --accent: #c8523a;
+    --accent-light: #f0d0ca;
+    --gold: #d4a843;
+    --gold-light: #f5e9cc;
+    --sage: #4a7c6f;
+    --sage-light: #cce0da;
+    --blue: #3a5fa0;
+    --blue-light: #d0ddf0;
+    --border: #d8d4c8;
+    --shadow: rgba(26,26,46,0.08);
+    --shadow-md: rgba(26,26,46,0.14);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--ink); min-height: 100vh; overflow-x: hidden; }
+
+  /* ── AUTH SCREEN ── */
+  #authScreen {
+    position: fixed; inset: 0; background: var(--ink);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1000; flex-direction: column; gap: 0;
+  }
+  .auth-card {
+    background: white; border-radius: 20px; padding: 48px 48px 40px;
+    width: 420px; max-width: 92vw; text-align: center;
+    box-shadow: 0 40px 80px rgba(0,0,0,0.4);
+    animation: authIn 0.4s ease;
+  }
+  @keyframes authIn { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:none; } }
+  .auth-logo { font-family:'Libre Baskerville',serif; font-size:28px; color:var(--ink); margin-bottom:4px; }
+  .auth-badge { display:inline-block; background:var(--accent); color:white; font-size:11px; font-weight:600; letter-spacing:0.1em; padding:3px 10px; border-radius:5px; margin-bottom:24px; }
+  .auth-desc { font-size:14px; color:var(--ink-light); line-height:1.6; margin-bottom:28px; }
+  .auth-desc strong { color:var(--ink); }
+  .auth-steps { background:var(--cream); border-radius:12px; padding:16px 20px; margin-bottom:28px; text-align:left; }
+  .auth-step { font-size:12.5px; color:var(--ink-light); margin-bottom:8px; display:flex; gap:10px; line-height:1.5; }
+  .auth-step:last-child { margin-bottom:0; }
+  .step-num { background:var(--ink); color:white; border-radius:50%; width:18px; height:18px; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; flex-shrink:0; margin-top:1px; }
+  .google-btn {
+    width:100%; padding:13px 20px; border-radius:10px; border:none;
+    background:var(--ink); color:white; font-family:'DM Sans',sans-serif;
+    font-size:14px; font-weight:600; cursor:pointer; transition:all 0.2s;
+    display:flex; align-items:center; justify-content:center; gap:10px;
+  }
+  .google-btn:hover { background:#2d2d4e; transform:translateY(-1px); }
+  .google-btn svg { width:18px; height:18px; }
+  .auth-note { font-size:11px; color:var(--ink-faint); margin-top:16px; line-height:1.5; }
+
+  /* ── SETUP SCREEN ── */
+  #setupScreen {
+    position:fixed; inset:0; background:rgba(26,26,46,0.7);
+    display:none; align-items:center; justify-content:center;
+    z-index:900; backdrop-filter:blur(4px);
+  }
+  #setupScreen.open { display:flex; }
+  .setup-card {
+    background:white; border-radius:16px; padding:36px; width:460px; max-width:92vw;
+    box-shadow:0 20px 60px rgba(0,0,0,0.3);
+  }
+  .setup-title { font-family:'Libre Baskerville',serif; font-size:20px; margin-bottom:8px; }
+  .setup-desc { font-size:13px; color:var(--ink-light); margin-bottom:24px; line-height:1.6; }
+  .setup-input { width:100%; border:1.5px solid var(--border); border-radius:8px; padding:10px 14px; font-family:'DM Sans',sans-serif; font-size:14px; color:var(--ink); margin-bottom:8px; outline:none; transition:border-color 0.15s; }
+  .setup-input:focus { border-color:var(--ink); }
+  .setup-hint { font-size:11.5px; color:var(--ink-faint); margin-bottom:20px; line-height:1.5; }
+  .setup-hint a { color:var(--blue); }
+  .setup-actions { display:flex; gap:10px; justify-content:flex-end; }
+
+  /* ── SYNC BAR ── */
+  #syncBar {
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+    background:var(--ink); color:white; padding:10px 20px; border-radius:10px;
+    font-size:12.5px; font-weight:500; z-index:800; display:none;
+    align-items:center; gap:10px; box-shadow:0 4px 20px rgba(0,0,0,0.25);
+    transition:all 0.25s;
+  }
+  #syncBar.show { display:flex; }
+  .sync-dot { width:8px; height:8px; border-radius:50%; background:#4ade80; flex-shrink:0; }
+  .sync-dot.syncing { background:var(--gold); animation:pulse 1s infinite; }
+  .sync-dot.error { background:var(--accent); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* ── HEADER ── */
+  header { background:var(--ink); color:var(--cream); padding:0 32px; display:flex; align-items:center; justify-content:space-between; height:60px; position:sticky; top:0; z-index:100; box-shadow:0 2px 12px var(--shadow-md); }
+  .logo { font-family:'Libre Baskerville',serif; font-size:18px; letter-spacing:0.02em; display:flex; align-items:center; gap:10px; }
+  .logo-badge { background:var(--accent); color:white; font-family:'DM Sans',sans-serif; font-size:11px; font-weight:600; letter-spacing:0.08em; padding:3px 8px; border-radius:4px; }
+  .sync-status { font-size:11px; color:rgba(255,255,255,0.45); display:flex; align-items:center; gap:6px; cursor:pointer; }
+  .sync-status-dot { width:6px; height:6px; border-radius:50%; background:#4ade80; }
+  .sync-status-dot.syncing { background:var(--gold); animation:pulse 1s infinite; }
+  .sync-status-dot.offline { background:var(--ink-faint); }
+  .sync-status-dot.error { background:var(--accent); }
+  .header-right { display:flex; align-items:center; gap:16px; }
+  .view-toggle { display:flex; background:rgba(255,255,255,0.1); border-radius:8px; padding:3px; gap:2px; }
+  .view-btn { background:none; border:none; color:rgba(255,255,255,0.6); padding:6px 14px; border-radius:6px; cursor:pointer; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500; transition:all 0.2s; }
+  .view-btn.active { background:white; color:var(--ink); }
+  .btn-primary { background:var(--accent); color:white; border:none; padding:8px 18px; border-radius:8px; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600; cursor:pointer; transition:all 0.2s; display:flex; align-items:center; gap:6px; }
+  .btn-primary:hover { background:#b04430; transform:translateY(-1px); }
+
+  /* ── LAYOUT ── */
+  .app-body { display:flex; height:calc(100vh - 60px); }
+  .sidebar { width:240px; background:white; border-right:1px solid var(--border); display:flex; flex-direction:column; overflow-y:auto; flex-shrink:0; }
+  .sidebar-section { padding:20px 16px 8px; }
+  .sidebar-label { font-size:10px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-faint); margin-bottom:8px; padding:0 8px; }
+  .project-item { display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:8px; cursor:pointer; transition:background 0.15s; font-size:13.5px; font-weight:500; color:var(--ink-light); }
+  .project-item:hover { background:var(--cream); }
+  .project-item.active { background:var(--cream-dark); color:var(--ink); }
+  .project-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .project-count { margin-left:auto; font-size:11px; background:var(--cream-dark); color:var(--ink-faint); padding:1px 7px; border-radius:10px; }
+  .add-project-btn { display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:8px; cursor:pointer; color:var(--ink-faint); font-size:13px; transition:all 0.15s; border:none; background:none; width:100%; font-family:'DM Sans',sans-serif; }
+  .add-project-btn:hover { color:var(--ink); background:var(--cream); }
+  .sidebar-divider { border:none; border-top:1px solid var(--border); margin:8px 16px; }
+  .stats-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:0 16px 16px; }
+  .stat-card { background:var(--cream); border-radius:10px; padding:12px; text-align:center; }
+  .stat-num { font-family:'Libre Baskerville',serif; font-size:22px; font-weight:700; color:var(--ink); }
+  .stat-label { font-size:10px; color:var(--ink-faint); font-weight:500; text-transform:uppercase; letter-spacing:0.06em; margin-top:2px; }
+
+  /* ── MAIN ── */
+  .main-content { flex:1; overflow:hidden; display:flex; flex-direction:column; }
+  .content-header { padding:20px 28px 16px; border-bottom:1px solid var(--border); background:white; display:flex; align-items:center; justify-content:space-between; flex-shrink:0; flex-wrap:wrap; gap:10px; }
+  .content-title { font-family:'Libre Baskerville',serif; font-size:20px; color:var(--ink); }
+  .filter-bar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .filter-chip { border:1px solid var(--border); background:white; padding:5px 12px; border-radius:20px; font-size:12px; font-weight:500; color:var(--ink-light); cursor:pointer; transition:all 0.15s; font-family:'DM Sans',sans-serif; }
+  .filter-chip:hover, .filter-chip.active { background:var(--ink); color:white; border-color:var(--ink); }
+
+  /* ── KANBAN ── */
+  .kanban-view { flex:1; overflow-x:auto; padding:24px 28px; display:none; }
+  .kanban-view.active { display:flex; gap:16px; align-items:flex-start; }
+  .kanban-col { width:280px; flex-shrink:0; display:flex; flex-direction:column; gap:10px; }
+  .col-header { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border-radius:10px; margin-bottom:2px; }
+  .col-title-row { display:flex; align-items:center; gap:8px; }
+  .col-icon { width:8px; height:8px; border-radius:50%; }
+  .col-title { font-size:12px; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; }
+  .col-count { font-size:11px; font-weight:600; padding:2px 8px; border-radius:10px; }
+  .col-backlog .col-header { background:#f0f0f5; }
+  .col-backlog .col-icon { background:var(--ink-faint); }
+  .col-backlog .col-title { color:var(--ink-faint); }
+  .col-backlog .col-count { background:#e0e0ea; color:var(--ink-faint); }
+  .col-inprogress .col-header { background:var(--blue-light); }
+  .col-inprogress .col-icon { background:var(--blue); }
+  .col-inprogress .col-title { color:var(--blue); }
+  .col-inprogress .col-count { background:rgba(58,95,160,0.15); color:var(--blue); }
+  .col-review .col-header { background:var(--gold-light); }
+  .col-review .col-icon { background:var(--gold); }
+  .col-review .col-title { color:#9a7520; }
+  .col-review .col-count { background:rgba(212,168,67,0.2); color:#9a7520; }
+  .col-done .col-header { background:var(--sage-light); }
+  .col-done .col-icon { background:var(--sage); }
+  .col-done .col-title { color:var(--sage); }
+  .col-done .col-count { background:rgba(74,124,111,0.15); color:var(--sage); }
+  .task-card { background:white; border:1px solid var(--border); border-radius:10px; padding:14px; cursor:pointer; transition:all 0.2s; box-shadow:0 1px 4px var(--shadow); position:relative; overflow:hidden; }
+  .task-card:hover { border-color:var(--ink-faint); box-shadow:0 4px 16px var(--shadow-md); transform:translateY(-1px); }
+  .task-card-accent { position:absolute; left:0; top:0; bottom:0; width:3px; }
+  .task-project-tag { font-size:10px; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; padding:2px 7px; border-radius:4px; margin-bottom:8px; display:inline-block; }
+  .task-title { font-size:13.5px; font-weight:500; color:var(--ink); line-height:1.4; margin-bottom:10px; }
+  .task-meta { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .task-due { font-size:11px; color:var(--ink-faint); display:flex; align-items:center; gap:4px; }
+  .task-due.overdue { color:var(--accent); font-weight:600; }
+  .task-due.soon { color:var(--gold); font-weight:600; }
+  .task-assignee { width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:700; color:white; flex-shrink:0; }
+  .task-priority { font-size:10px; padding:2px 6px; border-radius:4px; font-weight:600; }
+  .priority-high { background:#ffe4e0; color:var(--accent); }
+  .priority-medium { background:var(--gold-light); color:#9a7520; }
+  .priority-low { background:var(--sage-light); color:var(--sage); }
+  .add-task-btn { width:100%; padding:10px; border:1.5px dashed var(--border); border-radius:10px; background:none; color:var(--ink-faint); font-family:'DM Sans',sans-serif; font-size:13px; cursor:pointer; transition:all 0.15s; display:flex; align-items:center; justify-content:center; gap:6px; }
+  .add-task-btn:hover { border-color:var(--ink-light); color:var(--ink); background:white; }
+  .empty-col { color:var(--ink-faint); font-size:12px; text-align:center; padding:16px; font-style:italic; }
+
+  /* ── CALENDAR ── */
+  .calendar-view { flex:1; overflow:auto; padding:24px 28px; display:none; }
+  .calendar-view.active { display:block; }
+  .cal-nav { display:flex; align-items:center; gap:16px; margin-bottom:20px; }
+  .cal-month { font-family:'Libre Baskerville',serif; font-size:22px; color:var(--ink); min-width:180px; }
+  .cal-nav-btn { width:34px; height:34px; border-radius:8px; border:1px solid var(--border); background:white; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:15px; color:var(--ink-light); transition:all 0.15s; }
+  .cal-nav-btn:hover { background:var(--ink); color:white; border-color:var(--ink); }
+  .cal-today-btn { border:1px solid var(--border); background:white; padding:6px 14px; border-radius:8px; font-family:'DM Sans',sans-serif; font-size:12px; font-weight:500; color:var(--ink-light); cursor:pointer; transition:all 0.15s; }
+  .cal-today-btn:hover { background:var(--ink); color:white; border-color:var(--ink); }
+  .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:1px; background:var(--border); border-radius:12px; overflow:hidden; border:1px solid var(--border); }
+  .cal-day-header { background:var(--ink); color:rgba(255,255,255,0.7); text-align:center; padding:10px 0; font-size:11px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; }
+  .cal-cell { background:white; min-height:110px; padding:8px; position:relative; transition:background 0.1s; cursor:pointer; }
+  .cal-cell:hover { background:#fefcf8; }
+  .cal-cell.other-month { background:var(--cream); }
+  .cal-cell.today { background:#fff8f6; }
+  .cal-date { font-size:12px; font-weight:600; color:var(--ink-light); margin-bottom:4px; width:24px; height:24px; display:flex; align-items:center; justify-content:center; border-radius:50%; }
+  .cal-cell.today .cal-date { background:var(--accent); color:white; }
+  .cal-cell.other-month .cal-date { color:var(--ink-faint); }
+  .cal-task-chip { font-size:10.5px; font-weight:500; padding:3px 7px; border-radius:5px; margin-bottom:3px; cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:opacity 0.15s; }
+  .cal-task-chip:hover { opacity:0.8; }
+  .more-tasks { font-size:10px; color:var(--ink-faint); font-weight:600; padding:2px 4px; }
+
+  /* ── MODAL ── */
+  .modal-overlay { position:fixed; inset:0; background:rgba(26,26,46,0.5); z-index:200; display:none; align-items:center; justify-content:center; padding:24px; backdrop-filter:blur(3px); }
+  .modal-overlay.open { display:flex; }
+  .modal { background:white; border-radius:16px; width:540px; max-width:100%; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(26,26,46,0.25); animation:modalIn 0.2s ease; }
+  @keyframes modalIn { from{opacity:0;transform:scale(0.96) translateY(8px)} to{opacity:1;transform:scale(1) translateY(0)} }
+  .modal-header { padding:24px 24px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+  .modal-title { font-family:'Libre Baskerville',serif; font-size:18px; color:var(--ink); }
+  .modal-close { width:32px; height:32px; border-radius:8px; border:none; background:var(--cream); cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; color:var(--ink-light); transition:all 0.15s; }
+  .modal-close:hover { background:var(--cream-dark); }
+  .modal-body { padding:20px 24px; }
+  .form-group { margin-bottom:16px; }
+  .form-label { font-size:12px; font-weight:600; color:var(--ink-light); letter-spacing:0.04em; margin-bottom:6px; display:block; }
+  .form-input, .form-select, .form-textarea { width:100%; border:1.5px solid var(--border); border-radius:8px; padding:9px 12px; font-family:'DM Sans',sans-serif; font-size:14px; color:var(--ink); background:white; transition:border-color 0.15s; outline:none; }
+  .form-input:focus, .form-select:focus, .form-textarea:focus { border-color:var(--ink); }
+  .form-textarea { resize:vertical; min-height:80px; }
+  .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .modal-footer { padding:16px 24px 20px; display:flex; justify-content:flex-end; gap:10px; border-top:1px solid var(--border); }
+  .btn-secondary { border:1.5px solid var(--border); background:white; color:var(--ink-light); padding:8px 18px; border-radius:8px; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600; cursor:pointer; transition:all 0.15s; }
+  .btn-secondary:hover { background:var(--cream); border-color:var(--ink-faint); }
+  .btn-danger { border:1.5px solid #ffd0c8; background:white; color:var(--accent); padding:8px 18px; border-radius:8px; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600; cursor:pointer; transition:all 0.15s; }
+  .btn-danger:hover { background:#fff0ee; }
+  .proj-modal { width:400px; }
+  .task-detail-status { display:flex; gap:8px; margin-bottom:4px; flex-wrap:wrap; }
+  .status-chip { border:1.5px solid var(--border); background:white; padding:5px 12px; border-radius:20px; font-size:12px; font-weight:600; cursor:pointer; transition:all 0.15s; font-family:'DM Sans',sans-serif; }
+  .status-chip.sel-backlog.active { background:#f0f0f5; border-color:var(--ink-faint); color:var(--ink-faint); }
+  .status-chip.sel-inprogress.active { background:var(--blue-light); border-color:var(--blue); color:var(--blue); }
+  .status-chip.sel-review.active { background:var(--gold-light); border-color:var(--gold); color:#9a7520; }
+  .status-chip.sel-done.active { background:var(--sage-light); border-color:var(--sage); color:var(--sage); }
+
+  /* ── TOAST ── */
+  .toast { position:fixed; bottom:24px; right:24px; background:var(--ink); color:white; padding:12px 20px; border-radius:10px; font-size:13px; font-weight:500; z-index:999; opacity:0; transform:translateY(8px); transition:all 0.25s; pointer-events:none; }
+  .toast.show { opacity:1; transform:translateY(0); }
+
+  /* ── LOADING ── */
+  .loading-spinner { width:20px; height:20px; border:2.5px solid rgba(255,255,255,0.3); border-top-color:white; border-radius:50%; animation:spin 0.7s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  ::-webkit-scrollbar { width:6px; height:6px; }
+  ::-webkit-scrollbar-track { background:transparent; }
+  ::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+
+  @media (max-width: 680px) {
+    .sidebar { display:none; }
+    .content-header { padding:14px 16px 12px; }
+    .kanban-view { padding:16px; }
+    header { padding:0 16px; }
+    .logo-badge { display:none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── AUTH SCREEN ── -->
+<div id="authScreen">
+  <div class="auth-card">
+    <div class="auth-logo">PC+ Project Hub</div>
+    <div class="auth-badge">CROSS-DEVICE SYNC</div>
+    <p class="auth-desc">
+      Your tasks are stored in <strong>your personal Google Drive</strong> — fully private, accessible from any device you sign into.
+    </p>
+    <div class="auth-steps">
+      <div class="auth-step"><div class="step-num">1</div><span>Sign in with your Google account</span></div>
+      <div class="auth-step"><div class="step-num">2</div><span>The app creates a private file in your Drive (<code>pc-hub-data.json</code>)</span></div>
+      <div class="auth-step"><div class="step-num">3</div><span>Open this same HTML file on any device — your data loads automatically</span></div>
+    </div>
+    <button class="google-btn" onclick="startAuth()">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+      </svg>
+      Continue with Google
+    </button>
+    <p class="auth-note">The app only requests access to files it creates — it cannot read any other files in your Drive. Your data never leaves your own Google account.</p>
+  </div>
+</div>
+
+<!-- ── MAIN APP (hidden until auth) ── -->
+<div id="appRoot" style="display:none">
+
+<header>
+  <div class="logo">
+    <span class="logo-badge">PC+</span>
+    Project Hub
+  </div>
+  <div class="header-right">
+    <div class="sync-status" onclick="syncNow()" title="Click to sync now">
+      <div class="sync-status-dot" id="syncDot"></div>
+      <span id="syncLabel">Synced</span>
+    </div>
+    <div class="view-toggle">
+      <button class="view-btn active" id="kanbanBtn" onclick="setView('kanban')">⊞ Kanban</button>
+      <button class="view-btn" id="calendarBtn" onclick="setView('calendar')">◫ Calendar</button>
+    </div>
+    <button class="btn-primary" onclick="openNewTaskModal()">+ New Task</button>
+  </div>
+</header>
+
+<div class="app-body">
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Projects</div>
+      <div id="projectList"></div>
+      <button class="add-project-btn" onclick="openProjectModal()"><span style="font-size:16px">+</span> Add Project</button>
+    </div>
+    <hr class="sidebar-divider">
+    <div class="sidebar-section"><div class="sidebar-label">Overview</div></div>
+    <div class="stats-grid" id="statsGrid"></div>
+  </aside>
+
+  <main class="main-content">
+    <div class="content-header">
+      <div class="content-title" id="contentTitle">All Tasks</div>
+      <div class="filter-bar">
+        <button class="filter-chip active" onclick="setFilter('all',this)">All</button>
+        <button class="filter-chip" onclick="setFilter('high',this)">High Priority</button>
+        <button class="filter-chip" onclick="setFilter('mine',this)">Mine</button>
+        <button class="filter-chip" onclick="setFilter('overdue',this)">Overdue</button>
+      </div>
+    </div>
+
+    <div class="kanban-view active" id="kanbanView">
+      <div class="kanban-col col-backlog">
+        <div class="col-header"><div class="col-title-row"><div class="col-icon"></div><span class="col-title">Backlog</span></div><span class="col-count" id="count-backlog">0</span></div>
+        <div id="tasks-backlog"></div>
+        <button class="add-task-btn" onclick="openNewTaskModal('backlog')">+ Add Task</button>
+      </div>
+      <div class="kanban-col col-inprogress">
+        <div class="col-header"><div class="col-title-row"><div class="col-icon"></div><span class="col-title">In Progress</span></div><span class="col-count" id="count-inprogress">0</span></div>
+        <div id="tasks-inprogress"></div>
+        <button class="add-task-btn" onclick="openNewTaskModal('inprogress')">+ Add Task</button>
+      </div>
+      <div class="kanban-col col-review">
+        <div class="col-header"><div class="col-title-row"><div class="col-icon"></div><span class="col-title">In Review</span></div><span class="col-count" id="count-review">0</span></div>
+        <div id="tasks-review"></div>
+        <button class="add-task-btn" onclick="openNewTaskModal('review')">+ Add Task</button>
+      </div>
+      <div class="kanban-col col-done">
+        <div class="col-header"><div class="col-title-row"><div class="col-icon"></div><span class="col-title">Done</span></div><span class="col-count" id="count-done">0</span></div>
+        <div id="tasks-done"></div>
+        <button class="add-task-btn" onclick="openNewTaskModal('done')">+ Add Task</button>
+      </div>
+    </div>
+
+    <div class="calendar-view" id="calendarView">
+      <div class="cal-nav">
+        <button class="cal-nav-btn" onclick="changeMonth(-1)">‹</button>
+        <div class="cal-month" id="calMonth"></div>
+        <button class="cal-nav-btn" onclick="changeMonth(1)">›</button>
+        <button class="cal-today-btn" onclick="goToday()">Today</button>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
+    </div>
+  </main>
+</div>
+
+</div><!-- /appRoot -->
+
+<!-- TASK MODAL -->
+<div class="modal-overlay" id="taskModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="taskModalTitle">New Task</div>
+      <button class="modal-close" onclick="closeModal('taskModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Task Title *</label><input class="form-input" id="taskTitle" placeholder="What needs to be done?" /></div>
+      <div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" id="taskDesc" placeholder="Add details, context, or notes..."></textarea></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Project</label><select class="form-select" id="taskProject"></select></div>
+        <div class="form-group"><label class="form-label">Assignee</label>
+          <select class="form-select" id="taskAssignee">
+            <option value="">Unassigned</option>
+            <option value="Stephen">Stephen (You)</option>
+            <option value="CAO">Chief Advancement Officer</option>
+            <option value="CoS">Chief of Staff</option>
+            <option value="Finance">Finance / NCheng</option>
+            <option value="Programs">Programs Lead</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Due Date</label><input class="form-input" type="date" id="taskDue" /></div>
+        <div class="form-group"><label class="form-label">Priority</label>
+          <select class="form-select" id="taskPriority">
+            <option value="low">Low</option>
+            <option value="medium" selected>Medium</option>
+            <option value="high">High</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Status</label>
+        <div class="task-detail-status">
+          <button class="status-chip sel-backlog" onclick="selectStatus('backlog')">Backlog</button>
+          <button class="status-chip sel-inprogress" onclick="selectStatus('inprogress')">In Progress</button>
+          <button class="status-chip sel-review" onclick="selectStatus('review')">In Review</button>
+          <button class="status-chip sel-done" onclick="selectStatus('done')">Done</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-danger" id="deleteTaskBtn" onclick="deleteCurrentTask()" style="display:none">Delete</button>
+      <button class="btn-secondary" onclick="closeModal('taskModal')">Cancel</button>
+      <button class="btn-primary" onclick="saveTask()">Save Task</button>
+    </div>
+  </div>
+</div>
+
+<!-- PROJECT MODAL -->
+<div class="modal-overlay" id="projectModal">
+  <div class="modal proj-modal">
+    <div class="modal-header">
+      <div class="modal-title">New Project</div>
+      <button class="modal-close" onclick="closeModal('projectModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Project Name *</label><input class="form-input" id="projName" placeholder="e.g. FY27 Strategic Plan" /></div>
+      <div class="form-group">
+        <label class="form-label">Color</label>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px" id="colorPicker">
+          <div class="color-swatch" data-color="#3a5fa0" style="width:28px;height:28px;border-radius:50%;background:#3a5fa0;cursor:pointer;border:2px solid transparent" onclick="selectColor('#3a5fa0')"></div>
+          <div class="color-swatch" data-color="#c8523a" style="width:28px;height:28px;border-radius:50%;background:#c8523a;cursor:pointer;border:2px solid transparent" onclick="selectColor('#c8523a')"></div>
+          <div class="color-swatch" data-color="#d4a843" style="width:28px;height:28px;border-radius:50%;background:#d4a843;cursor:pointer;border:2px solid transparent" onclick="selectColor('#d4a843')"></div>
+          <div class="color-swatch" data-color="#4a7c6f" style="width:28px;height:28px;border-radius:50%;background:#4a7c6f;cursor:pointer;border:2px solid transparent" onclick="selectColor('#4a7c6f')"></div>
+          <div class="color-swatch" data-color="#8b5cf6" style="width:28px;height:28px;border-radius:50%;background:#8b5cf6;cursor:pointer;border:2px solid transparent" onclick="selectColor('#8b5cf6')"></div>
+          <div class="color-swatch" data-color="#d4708a" style="width:28px;height:28px;border-radius:50%;background:#d4708a;cursor:pointer;border:2px solid transparent" onclick="selectColor('#d4708a')"></div>
+          <div class="color-swatch" data-color="#1a1a2e" style="width:28px;height:28px;border-radius:50%;background:#1a1a2e;cursor:pointer;border:2px solid transparent" onclick="selectColor('#1a1a2e')"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('projectModal')">Cancel</button>
+      <button class="btn-primary" onclick="saveProject()">Create Project</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════
+//  GOOGLE DRIVE CONFIG
+//  ▸ You must create a Google Cloud project and paste your credentials below.
+//  ▸ Full setup instructions are embedded in this file — search "SETUP GUIDE".
+// ══════════════════════════════════════════
+const GAPI_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID';   // ← replace
+const GAPI_API_KEY   = 'YOUR_GOOGLE_API_KEY';      // ← replace
+const DRIVE_SCOPES   = 'https://www.googleapis.com/auth/drive.appdata';
+const DATA_FILENAME  = 'pc-hub-data.json';
+
+/*
+╔══════════════════════════════════════════════════════════════════╗
+║                        SETUP GUIDE                              ║
+║  One-time, ~10 min setup. Only you need to do this.             ║
+╠══════════════════════════════════════════════════════════════════╣
+║  1. Go to https://console.cloud.google.com                      ║
+║  2. Create a new project (e.g. "PC Hub")                        ║
+║  3. Enable the "Google Drive API"                               ║
+║     → APIs & Services → Library → search "Drive" → Enable      ║
+║  4. Create an API Key                                           ║
+║     → APIs & Services → Credentials → + Create → API Key       ║
+║     → Copy it and paste above as GAPI_API_KEY                   ║
+║  5. Create an OAuth 2.0 Client ID                               ║
+║     → + Create → OAuth Client ID → Web Application             ║
+║     → Add your file's URL to "Authorized JavaScript origins"    ║
+║       (e.g. file:///path/to/file or https://your-host.com)      ║
+║     → Copy Client ID → paste above as GAPI_CLIENT_ID           ║
+║  6. On the OAuth Consent Screen, add your Google account        ║
+║     as a Test User (while in testing mode)                      ║
+║  7. Save this file and open it in Chrome or Edge                ║
+║                                                                 ║
+║  Your data is stored in Google Drive's "appDataFolder" —        ║
+║  a hidden, app-private folder. It never appears in your         ║
+║  regular Drive files and no other app can access it.            ║
+╚══════════════════════════════════════════════════════════════════╝
+*/
+
+// ── STATE ──────────────────────────────────────────────────────
+let state = { projects: [], tasks: [] };
+let driveFileId = null;
+let accessToken = null;
+let syncTimeout = null;
+let lastSynced = null;
+let isSyncing = false;
+
+const today = new Date();
+let calYear = today.getFullYear();
+let calMonth = today.getMonth();
+let currentView = 'kanban';
+let selectedProject = 'all';
+let activeFilter = 'all';
+let editingTaskId = null;
+let selectedStatus = 'backlog';
+let selectedColor = '#3a5fa0';
+
+function daysFromNow(n) {
+  const d = new Date();
+  d.setDate(d.getDate() + n);
+  return d.toISOString().split('T')[0];
+}
+
+const defaultState = {
+  projects: [
+    { id:'p1', name:'FY27 Strategic Plan', color:'#3a5fa0' },
+    { id:'p2', name:'Board Relations', color:'#c8523a' },
+    { id:'p3', name:'Staff Restructuring', color:'#4a7c6f' },
+    { id:'p4', name:'Finance & Operations', color:'#d4a843' },
+  ],
+  tasks: [
+    { id:'t1', title:'Finalize FY27 Strategic Plan presentation', desc:'Include program expansion metrics and board narrative.', project:'p1', assignee:'Stephen', due:daysFromNow(5), priority:'high', status:'inprogress' },
+    { id:'t2', title:'Onboard Chief of Staff — 30-day check-in', desc:'Review structured reflection questions and set working rhythms.', project:'p3', assignee:'Stephen', due:daysFromNow(8), priority:'medium', status:'inprogress' },
+    { id:'t3', title:'Staff participatory planning process kickoff', desc:'Set agenda for June 30 deadline.', project:'p1', assignee:'CoS', due:daysFromNow(14), priority:'high', status:'backlog' },
+    { id:'t4', title:'Review NCheng LLP monthly financials', desc:'', project:'p4', assignee:'Finance', due:daysFromNow(3), priority:'medium', status:'review' },
+    { id:'t5', title:'Board communication — restructuring update', desc:'', project:'p2', assignee:'Stephen', due:daysFromNow(-2), priority:'high', status:'backlog' },
+    { id:'t6', title:'CAO compensation documentation filed', desc:'Finalize record of board-approved decision.', project:'p3', assignee:'Stephen', due:daysFromNow(-5), priority:'low', status:'done' },
+    { id:'t7', title:'Update job descriptions post-restructure', desc:'', project:'p3', assignee:'CoS', due:daysFromNow(20), priority:'low', status:'backlog' },
+    { id:'t8', title:'Prepare Q3 Board meeting agenda', desc:'', project:'p2', assignee:'Stephen', due:daysFromNow(12), priority:'medium', status:'inprogress' },
+  ]
+};
+
+// ── GOOGLE AUTH ────────────────────────────────────────────────
+function startAuth() {
+  // Load Google Identity Services
+  if (GAPI_CLIENT_ID === 'YOUR_GOOGLE_CLIENT_ID') {
+    showSetupWarning();
+    return;
+  }
+  loadGIS();
+}
+
+function showSetupWarning() {
+  showToast('Please add your Google Client ID & API Key first. See the SETUP GUIDE inside the file.');
+  // For demo/dev: skip auth and use local state
+  setTimeout(() => {
+    state = JSON.parse(JSON.stringify(defaultState));
+    bootApp(false);
+  }, 1500);
+}
+
+function loadGIS() {
+  setSyncStatus('syncing', 'Connecting…');
+  const script = document.createElement('script');
+  script.src = 'https://accounts.google.com/gsi/client';
+  script.onload = initGIS;
+  script.onerror = () => showToast('Failed to load Google Sign-In. Check your connection.');
+  document.head.appendChild(script);
+}
+
+function initGIS() {
+  const client = google.accounts.oauth2.initTokenClient({
+    client_id: GAPI_CLIENT_ID,
+    scope: DRIVE_SCOPES,
+    callback: async (resp) => {
+      if (resp.error) { showToast('Sign-in failed: ' + resp.error); return; }
+      accessToken = resp.access_token;
+      await loadGAPIAndData();
+    }
+  });
+  client.requestAccessToken();
+}
+
+async function loadGAPIAndData() {
+  setSyncStatus('syncing', 'Loading data…');
+  try {
+    await loadDriveData();
+    bootApp(true);
+  } catch(e) {
+    console.error(e);
+    showToast('Could not load Drive data. Using local copy.');
+    state = JSON.parse(JSON.stringify(defaultState));
+    bootApp(false);
+  }
+}
+
+function bootApp(withDrive) {
+  document.getElementById('authScreen').style.display = 'none';
+  document.getElementById('appRoot').style.display = 'block';
+  if (withDrive) {
+    setSyncStatus('ok', 'Synced');
+    // Auto-sync every 60 seconds
+    setInterval(syncNow, 60000);
+  } else {
+    setSyncStatus('offline', 'Local only');
+  }
+  render();
+}
+
+// ── GOOGLE DRIVE API ───────────────────────────────────────────
+async function driveRequest(method, path, params, body) {
+  const url = new URL('https://www.googleapis.com' + path);
+  if (params) Object.entries(params).forEach(([k,v]) => url.searchParams.set(k, v));
+  const opts = {
+    method,
+    headers: { Authorization: 'Bearer ' + accessToken }
+  };
+  if (body !== undefined) {
+    if (typeof body === 'string') {
+      opts.headers['Content-Type'] = 'application/json';
+      opts.body = body;
+    } else {
+      opts.body = body;
+    }
+  }
+  const res = await fetch(url.toString(), opts);
+  if (!res.ok) throw new Error(`Drive API ${res.status}: ${await res.text()}`);
+  return res;
+}
+
+async function loadDriveData() {
+  // Search for existing file
+  const res = await driveRequest('GET', '/drive/v3/files', {
+    spaces: 'appDataFolder',
+    fields: 'files(id,name)',
+    q: `name='${DATA_FILENAME}'`
+  });
+  const data = await res.json();
+  if (data.files && data.files.length > 0) {
+    driveFileId = data.files[0].id;
+    // Download content
+    const dl = await driveRequest('GET', `/drive/v3/files/${driveFileId}`, { alt: 'media' });
+    const json = await dl.json();
+    state = json;
+  } else {
+    // First time: use default state and create file
+    state = JSON.parse(JSON.stringify(defaultState));
+    await createDriveFile();
+  }
+  lastSynced = new Date();
+}
+
+async function createDriveFile() {
+  // Multipart upload
+  const metadata = { name: DATA_FILENAME, parents: ['appDataFolder'] };
+  const content = JSON.stringify(state);
+  const boundary = 'pcplus_boundary';
+  const body = [
+    `--${boundary}`,
+    'Content-Type: application/json; charset=UTF-8',
+    '',
+    JSON.stringify(metadata),
+    `--${boundary}`,
+    'Content-Type: application/json',
+    '',
+    content,
+    `--${boundary}--`
+  ].join('\r\n');
+
+  const res = await driveRequest('POST', '/upload/drive/v3/files', { uploadType: 'multipart', fields: 'id' },
+    new Blob([body], { type: `multipart/related; boundary=${boundary}` })
+  );
+  const data = await res.json();
+  driveFileId = data.id;
+}
+
+async function saveToDrive() {
+  if (!accessToken || !driveFileId) return;
+  if (isSyncing) return;
+  isSyncing = true;
+  setSyncStatus('syncing', 'Saving…');
+  try {
+    await driveRequest('PATCH', `/upload/drive/v3/files/${driveFileId}`,
+      { uploadType: 'media' },
+      JSON.stringify(state)
+    );
+    lastSynced = new Date();
+    setSyncStatus('ok', 'Synced');
+  } catch(e) {
+    console.error('Drive save error:', e);
+    setSyncStatus('error', 'Sync failed');
+    showToast('Could not save to Drive. Changes kept locally.');
+  } finally {
+    isSyncing = false;
+  }
+}
+
+function scheduleSave() {
+  if (syncTimeout) clearTimeout(syncTimeout);
+  syncTimeout = setTimeout(saveToDrive, 1500);
+}
+
+async function syncNow() {
+  if (!accessToken) return;
+  setSyncStatus('syncing', 'Syncing…');
+  try {
+    const res = await driveRequest('GET', `/drive/v3/files/${driveFileId}`, { alt: 'media' });
+    const remote = await res.json();
+    // Simple merge: remote wins (last-write wins per key)
+    state = remote;
+    render();
+    setSyncStatus('ok', 'Synced');
+    lastSynced = new Date();
+  } catch(e) {
+    setSyncStatus('error', 'Sync failed');
+  }
+}
+
+function setSyncStatus(type, label) {
+  const dot = document.getElementById('syncDot');
+  const lbl = document.getElementById('syncLabel');
+  if (!dot) return;
+  dot.className = 'sync-status-dot ' + (type === 'ok' ? '' : type);
+  lbl.textContent = label;
+}
+
+// ── RENDER ─────────────────────────────────────────────────────
+function render() {
+  renderSidebar();
+  renderStats();
+  if (currentView === 'kanban') renderKanban();
+  else renderCalendar();
+}
+
+function afterChange() {
+  render();
+  scheduleSave();
+}
+
+function getFilteredTasks() {
+  let tasks = state.tasks;
+  if (selectedProject !== 'all') tasks = tasks.filter(t => t.project === selectedProject);
+  const todayStr = today.toISOString().split('T')[0];
+  if (activeFilter === 'high') tasks = tasks.filter(t => t.priority === 'high');
+  else if (activeFilter === 'mine') tasks = tasks.filter(t => t.assignee === 'Stephen');
+  else if (activeFilter === 'overdue') tasks = tasks.filter(t => t.due && t.due < todayStr && t.status !== 'done');
+  return tasks;
+}
+
+function renderSidebar() {
+  const list = document.getElementById('projectList');
+  if (!list) return;
+  let html = `<div class="project-item ${selectedProject==='all'?'active':''}" onclick="selectProject('all')">
+    <div class="project-dot" style="background:#9090b0"></div><span>All Tasks</span>
+    <span class="project-count">${state.tasks.length}</span></div>`;
+  state.projects.forEach(p => {
+    const cnt = state.tasks.filter(t => t.project === p.id).length;
+    html += `<div class="project-item ${selectedProject===p.id?'active':''}" onclick="selectProject('${p.id}')">
+      <div class="project-dot" style="background:${p.color}"></div><span>${p.name}</span>
+      <span class="project-count">${cnt}</span></div>`;
+  });
+  list.innerHTML = html;
+}
+
+function renderStats() {
+  const el = document.getElementById('statsGrid');
+  if (!el) return;
+  const todayStr = today.toISOString().split('T')[0];
+  const t = state.tasks;
+  el.innerHTML = `
+    <div class="stat-card"><div class="stat-num">${t.filter(x=>x.status==='inprogress').length}</div><div class="stat-label">Active</div></div>
+    <div class="stat-card"><div class="stat-num">${t.filter(x=>x.status==='done').length}</div><div class="stat-label">Done</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--accent)">${t.filter(x=>x.due&&x.due<todayStr&&x.status!=='done').length}</div><div class="stat-label">Overdue</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--gold)">${t.filter(x=>x.priority==='high'&&x.status!=='done').length}</div><div class="stat-label">High Pri</div></div>`;
+}
+
+function getProject(id) { return state.projects.find(p=>p.id===id)||{name:'General',color:'#9090b0'}; }
+
+function dueDateClass(due) {
+  if (!due) return '';
+  const todayStr = today.toISOString().split('T')[0];
+  const diff = (new Date(due)-new Date(todayStr))/(1000*60*60*24);
+  return diff < 0 ? 'overdue' : diff <= 3 ? 'soon' : '';
+}
+
+function formatDue(due) {
+  if (!due) return '';
+  return new Date(due+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
+}
+
+const aColors = {Stephen:'#1a1a2e',CAO:'#c8523a',CoS:'#3a5fa0',Finance:'#d4a843',Programs:'#4a7c6f'};
+function assigneeColor(n) { return aColors[n]||'#9090b0'; }
+function assigneeInitials(n) { return n?(n.substring(0,2).toUpperCase()):'?'; }
+
+function renderKanban() {
+  ['backlog','inprogress','review','done'].forEach(s => {
+    const tasks = getFilteredTasks().filter(t=>t.status===s);
+    document.getElementById(`count-${s}`).textContent = tasks.length;
+    const c = document.getElementById(`tasks-${s}`);
+    if (!tasks.length) { c.innerHTML='<div class="empty-col">No tasks</div>'; return; }
+    c.innerHTML = tasks.map(t => {
+      const proj = getProject(t.project);
+      const dc = dueDateClass(t.due);
+      return `<div class="task-card" onclick="openEditTaskModal('${t.id}')">
+        <div class="task-card-accent" style="background:${proj.color}"></div>
+        <div style="padding-left:8px">
+          <div class="task-project-tag" style="background:${proj.color}22;color:${proj.color}">${proj.name}</div>
+          <div class="task-title">${t.title}</div>
+          <div class="task-meta">
+            <span class="task-due ${dc}">${dc==='overdue'?'⚠ ':''}${formatDue(t.due)}</span>
+            <div style="display:flex;align-items:center;gap:6px">
+              <span class="task-priority priority-${t.priority}">${t.priority}</span>
+              ${t.assignee?`<div class="task-assignee" style="background:${assigneeColor(t.assignee)}" title="${t.assignee}">${assigneeInitials(t.assignee)}</div>`:''}
+            </div>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  });
+}
+
+function renderCalendar() {
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('calMonth').textContent = `${months[calMonth]} ${calYear}`;
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const todayStr = today.toISOString().split('T')[0];
+  const firstDay = new Date(calYear,calMonth,1).getDay();
+  const daysInMonth = new Date(calYear,calMonth+1,0).getDate();
+  const daysInPrev = new Date(calYear,calMonth,0).getDate();
+  let html = days.map(d=>`<div class="cal-day-header">${d}</div>`).join('');
+  let cells = [];
+  for (let i=firstDay-1;i>=0;i--) cells.push({day:daysInPrev-i,month:calMonth-1,year:calYear,other:true});
+  for (let d=1;d<=daysInMonth;d++) cells.push({day:d,month:calMonth,year:calYear,other:false});
+  while (cells.length%7!==0) cells.push({day:cells.length-daysInMonth-firstDay+1,month:calMonth+1,year:calYear,other:true});
+  const allTasks = selectedProject==='all'?state.tasks:state.tasks.filter(t=>t.project===selectedProject);
+  cells.forEach(cell => {
+    const dateStr = `${cell.year}-${String(cell.month+1).padStart(2,'0')}-${String(cell.day).padStart(2,'0')}`;
+    const isToday = dateStr===todayStr;
+    const dayTasks = allTasks.filter(t=>t.due===dateStr);
+    let tasksHtml = dayTasks.slice(0,3).map(t=>{
+      const proj=getProject(t.project);
+      return `<div class="cal-task-chip" style="background:${proj.color}22;color:${proj.color}" onclick="openEditTaskModal('${t.id}');event.stopPropagation()" title="${t.title}">${t.title}</div>`;
+    }).join('');
+    if (dayTasks.length>3) tasksHtml+=`<div class="more-tasks">+${dayTasks.length-3} more</div>`;
+    html+=`<div class="cal-cell${cell.other?' other-month':''}${isToday?' today':''}" onclick="openNewTaskModal(null,'${dateStr}')">
+      <div class="cal-date">${cell.day}</div>${tasksHtml}</div>`;
+  });
+  document.getElementById('calGrid').innerHTML = html;
+}
+
+// ── NAVIGATION ─────────────────────────────────────────────────
+function setView(v) {
+  currentView=v;
+  document.getElementById('kanbanView').classList.toggle('active',v==='kanban');
+  document.getElementById('calendarView').classList.toggle('active',v==='calendar');
+  document.getElementById('kanbanBtn').classList.toggle('active',v==='kanban');
+  document.getElementById('calendarBtn').classList.toggle('active',v==='calendar');
+  render();
+}
+
+function selectProject(id) {
+  selectedProject=id;
+  const proj=id==='all'?null:state.projects.find(p=>p.id===id);
+  document.getElementById('contentTitle').textContent=proj?proj.name:'All Tasks';
+  render();
+}
+
+function setFilter(f,el) {
+  activeFilter=f;
+  document.querySelectorAll('.filter-chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  render();
+}
+
+function changeMonth(d) {
+  calMonth+=d;
+  if(calMonth>11){calMonth=0;calYear++;}
+  if(calMonth<0){calMonth=11;calYear--;}
+  renderCalendar();
+}
+
+function goToday() { calMonth=today.getMonth(); calYear=today.getFullYear(); renderCalendar(); }
+
+// ── TASK MODAL ─────────────────────────────────────────────────
+function openNewTaskModal(status, dueDate) {
+  editingTaskId=null; selectedStatus=status||'backlog';
+  document.getElementById('taskModalTitle').textContent='New Task';
+  document.getElementById('taskTitle').value='';
+  document.getElementById('taskDesc').value='';
+  document.getElementById('taskDue').value=dueDate||'';
+  document.getElementById('taskPriority').value='medium';
+  document.getElementById('taskAssignee').value='';
+  document.getElementById('deleteTaskBtn').style.display='none';
+  populateProjectSelect(); updateStatusChips(); openModal('taskModal');
+}
+
+function openEditTaskModal(id) {
+  const task=state.tasks.find(t=>t.id===id); if(!task) return;
+  editingTaskId=id; selectedStatus=task.status;
+  document.getElementById('taskModalTitle').textContent='Edit Task';
+  document.getElementById('taskTitle').value=task.title;
+  document.getElementById('taskDesc').value=task.desc||'';
+  document.getElementById('taskDue').value=task.due||'';
+  document.getElementById('taskPriority').value=task.priority;
+  document.getElementById('taskAssignee').value=task.assignee||'';
+  document.getElementById('deleteTaskBtn').style.display='block';
+  populateProjectSelect(task.project); updateStatusChips(); openModal('taskModal');
+}
+
+function populateProjectSelect(sel) {
+  const el=document.getElementById('taskProject');
+  el.innerHTML='<option value="">No Project</option>'+
+    state.projects.map(p=>`<option value="${p.id}"${sel===p.id?' selected':''}>${p.name}</option>`).join('');
+  if(selectedProject!=='all'&&!sel) el.value=selectedProject;
+}
+
+function selectStatus(s) { selectedStatus=s; updateStatusChips(); }
+function updateStatusChips() {
+  document.querySelectorAll('.status-chip').forEach(c=>c.classList.remove('active'));
+  const chip=document.querySelector(`.sel-${selectedStatus}`);
+  if(chip) chip.classList.add('active');
+}
+
+function saveTask() {
+  const title=document.getElementById('taskTitle').value.trim();
+  if(!title){showToast('Please enter a task title.');return;}
+  const task={
+    id:editingTaskId||'t'+Date.now(),
+    title,
+    desc:document.getElementById('taskDesc').value.trim(),
+    project:document.getElementById('taskProject').value,
+    assignee:document.getElementById('taskAssignee').value,
+    due:document.getElementById('taskDue').value,
+    priority:document.getElementById('taskPriority').value,
+    status:selectedStatus,
+  };
+  if(editingTaskId){
+    const idx=state.tasks.findIndex(t=>t.id===editingTaskId);
+    state.tasks[idx]=task; showToast('Task updated.');
+  } else {
+    state.tasks.push(task); showToast('Task created.');
+  }
+  closeModal('taskModal'); afterChange();
+}
+
+function deleteCurrentTask() {
+  if(!editingTaskId) return;
+  state.tasks=state.tasks.filter(t=>t.id!==editingTaskId);
+  closeModal('taskModal'); showToast('Task deleted.'); afterChange();
+}
+
+// ── PROJECT MODAL ──────────────────────────────────────────────
+function openProjectModal() {
+  selectedColor='#3a5fa0';
+  document.getElementById('projName').value='';
+  updateColorSwatches(); openModal('projectModal');
+}
+
+function selectColor(c) { selectedColor=c; updateColorSwatches(); }
+function updateColorSwatches() {
+  document.querySelectorAll('.color-swatch').forEach(s=>{
+    s.style.border=s.dataset.color===selectedColor?'2px solid var(--ink)':'2px solid transparent';
+  });
+}
+
+function saveProject() {
+  const name=document.getElementById('projName').value.trim();
+  if(!name){showToast('Please enter a project name.');return;}
+  state.projects.push({id:'p'+Date.now(),name,color:selectedColor});
+  closeModal('projectModal'); showToast('Project created.'); afterChange();
+}
+
+// ── UTILS ──────────────────────────────────────────────────────
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.modal-overlay').forEach(o=>{
+  o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');});
+});
+
+function showToast(msg) {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2800);
+}
+</script>
+</body>
+</html>
